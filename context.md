@@ -20,7 +20,7 @@ The todos-cli will receive 3 input arguments:
 
 ## Requirments
 
-These are the Rust libraries required for the **todos-cli**:
+These are the Rust crates required for the **todos-cli**:
 
 - [Tera](https://keats-github-io.translate.goog/tera/docs/) for templating.
 - [Clap](https://docs.rs/clap/latest/clap/) for reading arguments.
