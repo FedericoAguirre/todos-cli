@@ -2,7 +2,7 @@
 
 ## Objective
 
-The todos-cli has to create a "TODOS - YYYYMM.md" file is created from
+The todos-cli, programmed in Rust, has to create a "TODOS - YYYYMM.md" file is created from
 templates.
 
 Each template has a number 1.md for Monday, 2.md for Tuesday, and so on until
