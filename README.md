@@ -10,11 +10,16 @@ The CLI accepts three arguments:
 
 - `--year` or `-y`: Year for the TODOs file
 - `--month` or `-m`: Month for the TODOs file
-- `--file` or `-f`: Output file path for the generated markdown
+- `--path` or `-p`: Output file path for the generated markdown
 
-Example:
+**Note**: If the --path is argument is ommited it is read from env variable TODOS_DEFAULT_PATH 
+
+Examples:
 ```sh
-cargo run -- --year 2025 --month 9 --file "TODOS-202509.md"
+cargo run -- --year 2025 --month 9 --path "~/Documents/Mapas"
+cargo run -- --year 2025 --month 9
+cargo run -- -y 2025 -m 9 -p "~/Documents/Mapas"
+cargo run -- -y 2025 -m 9
 ```
 
 ## Templates

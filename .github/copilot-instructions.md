@@ -8,6 +8,9 @@
 ## Key Files & Structure
 - `src/main.rs`: Main entry point for the CLI logic.
 - `Cargo.toml`: Project manifest for dependencies, metadata, and build configuration.
+- `context.md`: Context and requirements for the project. This file MUST be read first in every case.
+- `README.md`: Project documentation and usage instructions.
+- `templates/`: Directory for markdown templates (e.g., `header.md`, `1.md` to `7.md`).
 - No additional modules, libraries, or external dependencies are present yet.
 
 ## Developer Workflows

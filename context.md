@@ -15,8 +15,10 @@ The todos-cli will receive 3 input arguments:
    YYYYMM.md" file.
 2. Month (--month or -m). This represent the month for creating the "TODOS -
    YYYYMM.md" file.
-3. File (--file or -f). This represent the output file path for the "TODOS -
-   YYYYMM.md" file.
+3. File (--path or -p). This represent the output path for the "TODOS -
+   YYYYMM.md" output file.
+
+**Note**: If the --path is argument is ommited it is read from env variable TODOS_DEFAULT_PATH 
 
 ## Requirments
 
