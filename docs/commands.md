@@ -9,3 +9,5 @@ cargo add tera --features=preserve_order --no-default-features && \
 cargo add clap --no-default-features --features=derive && \
 cargo add chrono --no-default-features --features=std
 ```
+
+**Note**: The Cargo.tml was updated to add std features in the Clap crate.
