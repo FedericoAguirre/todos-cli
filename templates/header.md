@@ -1,4 +1,4 @@
-# TODOS for {{ year }}-{{ month }}
+# TODOS {{ year }}-{{ month }}
 
 ---
 
