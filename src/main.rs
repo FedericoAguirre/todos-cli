@@ -7,11 +7,11 @@ use todos::Todos;
 #[command(author = "Federico Aguirre", version = env!("CARGO_PKG_VERSION"), about = "This CLI creates a TODO file for a given month.", long_about = None)]
 struct Args {
     /// Year for the TODOS file
-    #[arg(short = 'y', long)]
+    #[arg(short = 'y', long, required = true)]
     year: i32,
 
     /// Month for the TODOS file (1-12)
-    #[arg(short = 'm', long, value_parser = clap::value_parser!(u32).range(1..=12))]
+    #[arg(short = 'm', long, required = true, value_parser = clap::value_parser!(u32).range(1..=12))]
     month: u32,
 
     /// Output file path for the TODOS file
@@ -62,7 +62,7 @@ mod tests {
 
     // #[test]
     // #[should_panic(
-    //     expected = "error: Invalid value for '--month <MONTH>': invalid digit found in string"
+    //     expected = "error: unexpected argument found"
     // )]
     // fn fails_on_invalid_month() {
     //     let args = vec!["test-bin", "-y", "2025", "-m", "13"];
