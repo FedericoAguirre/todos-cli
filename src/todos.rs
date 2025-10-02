@@ -1,5 +1,3 @@
-use std::path;
-
 pub struct Todos {
     // Add fields as needed, e.g. year, month, days, etc.
     pub year: i32,
