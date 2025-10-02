@@ -68,4 +68,10 @@ mod tests {
     //     let args = vec!["test-bin", "-y", "2025", "-m", "13"];
     //     let _ = Args::parse_from(args);
     // }
+
+    #[test]
+    fn verify_args() {
+        use clap::CommandFactory;
+        Args::command().debug_assert();
+    }
 }
