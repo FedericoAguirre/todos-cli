@@ -3,7 +3,7 @@ use clap::Parser;
 use todos::Todos;
 
 /// Command line arguments for todos-cli
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(author = "Federico Aguirre", version = env!("CARGO_PKG_VERSION"), about = "This CLI creates a TODO file for a given month.", long_about = None)]
 struct Args {
     /// Year for the TODOS file
