@@ -1,5 +1,9 @@
 mod todos;
+use chrono::Datelike;
 use clap::Parser;
+use std::fs;
+use std::path::Path;
+use tera::{Context, Tera};
 use todos::Todos;
 
 /// Command line arguments for todos-cli
@@ -22,10 +26,59 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let todos = Todos::new(args.year, args.month, args.path);
-    println!(
-        "Todos struct created: year={}, month={}, path={:?}",
-        todos.year, todos.month, todos.path
-    );
+    if let Err(e) = create_todos_file(&todos) {
+        eprintln!("Error creating TODOS file: {}", e);
+        std::process::exit(1);
+    }
+}
+
+/// Crea el archivo "TODOS - YYYYMM.md" usando los templates y lo guarda en el path indicado.
+pub fn create_todos_file(todos: &Todos) -> Result<(), Box<dyn std::error::Error>> {
+    // Construir el nombre del archivo
+    let filename = format!("TODOS - {:04}{:02}.md", todos.year, todos.month);
+
+    // Determinar el path de salida
+    let output_path = if let Some(ref path) = todos.path {
+        Path::new(path).join(&filename)
+    } else if let Ok(env_path) = std::env::var("TODOS_DEFAULT_PATH") {
+        Path::new(&env_path).join(&filename)
+    } else {
+        Path::new(&filename).to_path_buf()
+    };
+
+    // Inicializar Tera con los templates
+    let tera = Tera::new("templates/*.md")?;
+
+    // Contexto para el header
+    let mut context = Context::new();
+    let yyyymm = format!("{:04}{:02}", todos.year, todos.month);
+
+    context.insert("YYYYMM", &yyyymm);
+
+    // Renderizar el header
+    let mut content = tera.render("header.md", &context)?;
+
+    // Agregar los días del mes
+    for date in todos.get_days() {
+        let mut day_ctx = Context::new();
+        let yyyymmdd = date.format("%Y%m%d").to_string();
+        day_ctx.insert("YYYYMMDD", &yyyymmdd);
+        // El template es "N.md" donde N es el día de la semana (1=Lunes, 7=Domingo)
+        let weekday = date.weekday().number_from_monday();
+        let template_name = format!("{}.md", weekday);
+        let day_content = tera.render(&template_name, &day_ctx)?;
+        content.push_str(&day_content);
+        content.push('\n');
+    }
+
+    // Guardar el archivo
+    if let Some(parent) = output_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(&output_path, content)?;
+
+    println!("Archivo generado: {}", output_path.display());
+    Ok(())
 }
 
 #[cfg(test)]
@@ -72,6 +125,7 @@ mod tests {
     #[test]
     fn verify_args() {
         use clap::CommandFactory;
+use chrono::NaiveDate;
         Args::command().debug_assert();
     }
 }
