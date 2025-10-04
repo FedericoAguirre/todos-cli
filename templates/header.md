@@ -1,4 +1,4 @@
-# TODOS {{ year }}-{{ month }}
+# TODOS {{ YYYYMM }}
 
 ---
 
