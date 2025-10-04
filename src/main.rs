@@ -1,10 +1,10 @@
-mod todos;
+mod lib;
 use chrono::Datelike;
 use clap::Parser;
+use lib::Todos;
 use std::fs;
 use std::path::Path;
 use tera::{Context, Tera};
-use todos::Todos;
 
 /// Command line arguments for todos-cli
 #[derive(Parser)]
