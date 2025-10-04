@@ -116,7 +116,6 @@ mod tests {
     #[test]
     fn verify_args() {
         use clap::CommandFactory;
-use chrono::NaiveDate;
         Args::command().debug_assert();
     }
 }
