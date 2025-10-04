@@ -1,10 +1,5 @@
-mod todos;
-use chrono::Datelike;
 use clap::Parser;
-use std::fs;
-use std::path::Path;
-use tera::{Context, Tera};
-use todos::Todos;
+use todos_cli::{Todos, create_todos_file};
 
 /// Command line arguments for todos-cli
 #[derive(Parser)]
@@ -30,46 +25,6 @@ fn main() {
         eprintln!("Error creating TODOS file: {}", e);
         std::process::exit(1);
     }
-}
-
-pub fn create_todos_file(todos: &Todos) -> Result<(), Box<dyn std::error::Error>> {
-    let filename = format!("TODOS - {:04}{:02}.md", todos.year, todos.month);
-
-    let output_path = if let Some(ref path) = todos.path {
-        Path::new(path).join(&filename)
-    } else if let Ok(env_path) = std::env::var("TODOS_DEFAULT_PATH") {
-        Path::new(&env_path).join(&filename)
-    } else {
-        Path::new(&filename).to_path_buf()
-    };
-
-    let tera = Tera::new("templates/*.md")?;
-
-    let mut context = Context::new();
-    let yyyymm = format!("{:04}{:02}", todos.year, todos.month);
-
-    context.insert("YYYYMM", &yyyymm);
-
-    let mut content = tera.render("header.md", &context)?;
-
-    for date in todos.get_days() {
-        let mut day_ctx = Context::new();
-        let yyyymmdd = date.format("%Y%m%d").to_string();
-        day_ctx.insert("YYYYMMDD", &yyyymmdd);
-        let weekday = date.weekday().number_from_monday();
-        let template_name = format!("{}.md", weekday);
-        let day_content = tera.render(&template_name, &day_ctx)?;
-        content.push_str(&day_content);
-        content.push('\n');
-    }
-
-    if let Some(parent) = output_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(&output_path, content)?;
-
-    println!("Archivo generado: {}", output_path.display());
-    Ok(())
 }
 
 #[cfg(test)]
