@@ -20,7 +20,16 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let todos = Todos::new(args.year, args.month, args.path);
+
+    let path = args.path.unwrap_or_else(|| {
+        if let Ok(env_path) = std::env::var("TODOS_DEFAULT_PATH") {
+            env_path
+        } else {
+            String::from(".")
+        }
+    });
+
+    let todos = Todos::new(args.year, args.month, path.into());
     if let Err(e) = create_todos_file(&todos) {
         eprintln!("Error creating TODOS file: {}", e);
         std::process::exit(1);

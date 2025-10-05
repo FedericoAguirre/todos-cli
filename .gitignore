@@ -1,3 +1,4 @@
 /target
 *.swp
 .DStore
+/test_output

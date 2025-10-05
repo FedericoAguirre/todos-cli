@@ -8,11 +8,11 @@ pub struct Todos {
     // Add fields as needed, e.g. year, month, days, etc.
     pub year: i32,
     pub month: u32,
-    pub path: Option<String>,
+    pub path: String,
 }
 
 impl Todos {
-    pub fn new(year: i32, month: u32, path: Option<String>) -> Self {
+    pub fn new(year: i32, month: u32, path: String) -> Self {
         Self { year, month, path }
     }
     pub fn get_days(&self) -> Vec<chrono::NaiveDate> {
@@ -37,13 +37,8 @@ impl Todos {
 pub fn create_todos_file(todos: &Todos) -> Result<(), Box<dyn std::error::Error>> {
     let filename = format!("TODOS - {:04}{:02}.md", todos.year, todos.month);
 
-    let output_path = if let Some(ref path) = todos.path {
-        Path::new(path).join(&filename)
-    } else if let Ok(env_path) = std::env::var("TODOS_DEFAULT_PATH") {
-        Path::new(&env_path).join(&filename)
-    } else {
-        Path::new(&filename).to_path_buf()
-    };
+    let path = todos.path.clone();
+    let output_path = Path::new(&path).join(&filename);
 
     let tera = Tera::new("templates/*.md")?;
 
@@ -80,7 +75,7 @@ mod tests {
 
     #[test]
     fn test_get_days_31_days_month() {
-        let todos = Todos::new(2024, 1, None); // January
+        let todos = Todos::new(2024, 1, ".".to_string()); // January
         let days = todos.get_days();
         assert_eq!(days.len(), 31);
         assert_eq!(
@@ -95,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_get_days_30_days_month() {
-        let todos = Todos::new(2024, 4, None); // April
+        let todos = Todos::new(2024, 4, ".".to_string()); // April
         let days = todos.get_days();
         assert_eq!(days.len(), 30);
         assert_eq!(
@@ -110,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_get_days_february_leap_year() {
-        let todos = Todos::new(2024, 2, None); // Leap year
+        let todos = Todos::new(2024, 2, ".".to_string()); // Leap year
         let days = todos.get_days();
         assert_eq!(days.len(), 29);
         assert_eq!(
@@ -125,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_get_days_february_non_leap_year() {
-        let todos = Todos::new(2023, 2, None); // Non-leap year
+        let todos = Todos::new(2023, 2, ".".to_string()); // Non-leap year
         let days = todos.get_days();
         assert_eq!(days.len(), 28);
         assert_eq!(
@@ -140,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_get_days_february_century_non_leap() {
-        let todos = Todos::new(1900, 2, None); // 1900 is not a leap year
+        let todos = Todos::new(1900, 2, ".".to_string()); // 1900 is not a leap year
         let days = todos.get_days();
         assert_eq!(days.len(), 28);
         assert_eq!(
@@ -151,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_get_days_february_century_leap() {
-        let todos = Todos::new(2000, 2, None); // 2000 is a leap year
+        let todos = Todos::new(2000, 2, ".".to_string()); // 2000 is a leap year
         let days = todos.get_days();
         assert_eq!(days.len(), 29);
         assert_eq!(
@@ -162,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_get_days_invalid_month() {
-        let todos = Todos::new(2024, 13, None); // Invalid month
+        let todos = Todos::new(2024, 13, ".".to_string()); // Invalid month
         let days = todos.get_days();
         assert!(days.is_empty());
     }
