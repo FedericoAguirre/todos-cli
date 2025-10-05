@@ -1,0 +1,66 @@
+{
+    // Use IntelliSense para saber los atributos posibles.
+    // Mantenga el puntero para ver las descripciones de los existentes atributos.
+    // Para más información, visite: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'todos_cli'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=todos-cli"
+                ],
+                "filter": {
+                    "name": "todos_cli",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'todos-cli'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=todos-cli",
+                    "--package=todos-cli"
+                ],
+                "filter": {
+                    "name": "todos-cli",
+                    "kind": "bin"
+                }
+            },
+            "env": {"TODOS_DEFAULT_PATH": "/Users/federicoaguirre/Documents/proyectos/todos-cli/test_output"},
+            "args": ["--year", "2025", "--month", "12"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'todos-cli'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=todos-cli",
+                    "--package=todos-cli"
+                ],
+                "filter": {
+                    "name": "todos-cli",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
