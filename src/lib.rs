@@ -65,7 +65,7 @@ pub fn create_todos_file(todos: &Todos) -> Result<(), Box<dyn std::error::Error>
     }
     fs::write(&output_path, content)?;
 
-    println!("Archivo generado: {}", output_path.display());
+    println!("Archivo TODOS creado: {}", output_path.display());
     Ok(())
 }
 
@@ -160,5 +160,67 @@ mod tests {
         let todos = Todos::new(2024, 13, ".".to_string()); // Invalid month
         let days = todos.get_days();
         assert!(days.is_empty());
+    }
+
+    #[test]
+    fn test_create_todos_file() {
+        let todos = Todos::new(2024, 2, ".".to_string());
+        let result = create_todos_file(&todos);
+        assert!(result.is_ok());
+
+        let expected_file = Path::new(".").join("TODOS - 202402.md");
+        assert!(expected_file.exists());
+
+        let first_line = fs::read_to_string(&expected_file)
+            .unwrap()
+            .lines()
+            .next()
+            .unwrap()
+            .to_string();
+        assert_eq!(first_line, "# TODOS 202402");
+
+        let days = vec![
+            "## 20240201 - Jueves",
+            "## 20240202 - Viernes",
+            "## 20240203 - Sábado",
+            "## 20240204 - Domingo",
+            "## 20240205 - Lunes",
+            "## 20240206 - Martes",
+            "## 20240207 - Miércoles",
+            "## 20240208 - Jueves",
+            "## 20240209 - Viernes",
+            "## 20240210 - Sábado",
+            "## 20240211 - Domingo",
+            "## 20240212 - Lunes",
+            "## 20240213 - Martes",
+            "## 20240214 - Miércoles",
+            "## 20240215 - Jueves",
+            "## 20240216 - Viernes",
+            "## 20240217 - Sábado",
+            "## 20240218 - Domingo",
+            "## 20240219 - Lunes",
+            "## 20240220 - Martes",
+            "## 20240221 - Miércoles",
+            "## 20240222 - Jueves",
+            "## 20240223 - Viernes",
+            "## 20240224 - Sábado",
+            "## 20240225 - Domingo",
+            "## 20240226 - Lunes",
+            "## 20240227 - Martes",
+            "## 20240228 - Miércoles",
+            "## 20240229 - Jueves",
+        ];
+
+        let file_days: Vec<String> = fs::read_to_string(&expected_file)
+            .unwrap()
+            .lines()
+            .filter(|line| line.starts_with("## "))
+            .map(|s| s.to_string())
+            .collect();
+
+        assert_eq!(file_days, days);
+
+        // Clean up
+        fs::remove_file(expected_file).unwrap();
     }
 }
