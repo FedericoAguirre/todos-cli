@@ -27,15 +27,15 @@ cargo run -- -y 2025 -m 9
 
 To set the TODOS_DEFAULT_PATH env variable in all sessions:
 
-```zshell
-echo 'export TODOS_DEFAULT_PATH="/Users/federicoaguirre/Documents/Mapas/TODOS"' >> ~/.zshrc
+```shell
+echo 'export TODOS_DEFAULT_PATH="/Users/$USER/Documents/Mapas/TODOS"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
 To set the TODOS_DEFAULT_PATH env variable in the current session:
 
-```zshell
-export TODOS_DEFAULT_PATH="/Users/federicoaguirre/Documents/Mapas/TODOS"
+```shell
+export TODOS_DEFAULT_PATH="/Users/$USER/Documents/Mapas/TODOS"
 ```
 
 ## Templates
