@@ -17,10 +17,25 @@ The CLI accepts three arguments:
 Examples:
 
 ```sh
-cargo run -- --year 2025 --month 9 --path "~/Documents/Mapas"
+cargo run -- --year 2025 --month 9 --path ~/Documents/Mapas/TODOS
 cargo run -- --year 2025 --month 9
-cargo run -- -y 2025 -m 9 -p "~/Documents/Mapas"
+cargo run -- -y 2025 -m 9 -p ~/Documents/Mapas/TODOS
 cargo run -- -y 2025 -m 9
+```
+
+### ENV Setting
+
+To set the TODOS_DEFAULT_PATH env variable in all sessions:
+
+```zshell
+echo 'export TODOS_DEFAULT_PATH="/Users/federicoaguirre/Documents/Mapas/TODOS"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+To set the TODOS_DEFAULT_PATH env variable in the current session:
+
+```zshell
+export TODOS_DEFAULT_PATH="/Users/federicoaguirre/Documents/Mapas/TODOS"
 ```
 
 ## Templates
