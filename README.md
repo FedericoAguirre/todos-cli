@@ -131,4 +131,4 @@ You can add references to other Obsidian notes putting the title name between `[
 
 ---
 
-See `context.md` for more details on requirements and design.
+See [context.md](context.md) for more details on requirements and design.

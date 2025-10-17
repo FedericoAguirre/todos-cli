@@ -18,13 +18,12 @@ The todos-cli will receive 3 input arguments:
 3. File (--path or -p). This represent the output path for the "TODOS -
    YYYYMM.md" output file.
 
-**Note**: If the --path is argument is ommited it is read from env variable TODOS_DEFAULT_PATH 
+**Note**: If the --path is argument is omitted it is read from env variable TODOS_DEFAULT_PATH.
 
-## Requirments
+## Requirements
 
 These are the Rust crates required for the **todos-cli**:
 
 - [Tera](https://keats-github-io.translate.goog/tera/docs/) for templating.
 - [Clap](https://docs.rs/clap/latest/clap/) for reading arguments.
 - [Chrono](https://docs.rs/chrono/latest/chrono/) for dates handling.
-
