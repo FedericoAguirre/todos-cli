@@ -18,5 +18,5 @@ clean:
 release: test
 	cargo build --release --color=always
 
-exec: release
+exec:
 	./target/release/$(shell basename $(CURDIR)) -y $(y) -m $(m)
