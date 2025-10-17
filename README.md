@@ -2,7 +2,7 @@
 
 ## Objective
 
-todos-cli is a Rust command-line tool to generate a monthly TODOs markdown file ("TODOS - YYYYMM.md") from templates.
+todos-cli is a Rust command-line tool to generate a monthly TODOs file compatible with the [Obsidian](https://obsidian.md/) software using the [Ivy Lee method](https://doodle.com/es/the-ivy-lee-method-six-tasks-to-productivity/) for productivity.
 
 ## Usage
 
