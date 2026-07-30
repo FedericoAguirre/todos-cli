@@ -1,4 +1,8 @@
 use clap::Parser;
+use std::fs;
+use std::path::PathBuf;
+use todos_cli::calendar::generate_ics;
+use todos_cli::parser::{CsvParser, MdParser};
 use todos_cli::{Todos, create_todos_file};
 
 /// Command line arguments for todos-cli
@@ -29,10 +33,32 @@ fn main() {
         }
     });
 
-    let todos = Todos::new(args.year, args.month, path.into());
+    let output_path: PathBuf = path.into();
+    let todos = Todos::new(args.year, args.month, output_path.clone());
     if let Err(e) = create_todos_file(&todos) {
         eprintln!("Error creating TODOS file: {}", e);
         std::process::exit(1);
+    }
+
+    let filename = format!("TODOS - {:04}{:02}.md", args.year, args.month);
+    let md_path = output_path.join(&filename);
+    if let Ok(md_content) = fs::read_to_string(&md_path) {
+        let items = MdParser::parse(&md_content);
+        let rules = fs::read_to_string("templates/todos_due_times.csv")
+            .map(|csv| CsvParser::parse(&csv))
+            .unwrap_or_else(|e| {
+                eprintln!("Warning: could not read CSV: {}, using defaults", e);
+                vec![]
+            });
+        let ics_name = format!("TODOS - {:04}{:02}", args.year, args.month);
+        let ics_content = generate_ics(&ics_name, &items, &rules);
+        let ics_filename = format!("TODOS - {:04}{:02}.ics", args.year, args.month);
+        let ics_path = output_path.join(&ics_filename);
+        if let Err(e) = fs::write(&ics_path, ics_content) {
+            eprintln!("Error creating ICS file: {}", e);
+        } else {
+            println!("Archivo ICS creado: {}", ics_path.display());
+        }
     }
 }
 

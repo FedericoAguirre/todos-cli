@@ -1,4 +1,12 @@
 /target
+debug/
+release/
 *.swp
 .DStore
 /test_output
+*.rs.bk
+*.rlib
+*.prof*
+.idea/
+*.log
+.env*

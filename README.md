@@ -10,9 +10,9 @@ The CLI accepts three arguments:
 
 - `--year` or `-y`: Year for the TODOs file
 - `--month` or `-m`: Month for the TODOs file
-- `--path` or `-p`: Output file path for the generated markdown
+- `--path` or `-p`: Output file path for the generated files
 
-**Note**: If the --path is argument is omitted it is read from env variable TODOS_DEFAULT_PATH.
+**Note**: If the `--path` argument is omitted it is read from env variable `TODOS_DEFAULT_PATH`.
 
 Examples:
 
@@ -22,6 +22,36 @@ cargo run -- --year 2025 --month 9
 cargo run -- -y 2025 -m 9 -p ~/Documents/Mapas/TODOS
 cargo run -- -y 2025 -m 9
 ```
+
+### Todos Calendar
+
+Since v0.2.0, the CLI also generates an **ICS calendar file** (`TODOS - YYYYMM.ics`) alongside the markdown file. The ICS file follows the [RFC 5545](https://tools.ietf.org/html/rfc5545) iCalendar standard and can be imported into **Google Calendar**, **Apple Calendar**, **Outlook**, **Android**, or any app that supports the `.ics` format.
+
+Each todo item from the markdown file becomes a **VEVENT** component (calendar event) with:
+
+| ICS Field | Description |
+|-----------|-------------|
+| `SUMMARY` | `[P<N>]` prefix + description with `[[ ]]` wiki-link brackets removed |
+| `DTSTART` | Event start time — configurable per weekday + priority (see below) |
+| `DTEND` | End time = DTSTART + 1 hour |
+| `VALARM` | Optional reminder alarm that fires N minutes before DTSTART |
+
+**Why VEVENT?** Earlier versions used `VTODO` (task) components. However, macOS Removed native VTODO import from Reminders.app starting in Monterey (2021), causing Calendar.app to reject the file with "No valid events found." Switching to `VEVENT` fixed cross-platform compatibility — it works on macOS Calendar, iOS, Android, Google Calendar, and Outlook alike.
+
+**Event scheduling logic**: The CLI reads `templates/todos_due_times.csv` to map each weekday + priority combination to a specific start hour and alarm offset. If a match is found, `DTSTART` is set to `md.date + csv.hour`, `DTEND` to 1 hour later, and a `VALARM` triggers `csv.minutes` minutes before start. If no match exists, `DTSTART` defaults to 09:00.
+
+Example mapping (from `templates/todos_due_times.csv`):
+
+```csv
+weekday,priority,hour,minutes
+Lunes,1,9:00,30
+Lunes,2,16:00,30
+...
+```
+
+The CSV uses Spanish weekday names (Lunes, Martes, ..., Domingo) matching the markdown output.
+
+The ICS file is generated automatically — no extra CLI flags needed. Both `TODOS - YYYYMM.md` and `TODOS - YYYYMM.ics` are written to the same output directory.
 
 ### ENV Setting
 
@@ -47,9 +77,9 @@ Templates are stored in the `templates/` directory:
 
 ## Dependencies
 
-- [Tera](https://keats.github.io/tera/docs/) — Templating engine
+- [Tera](https://keats.github.io/tera/docs/) — Templating engine for markdown generation
 - [Clap](https://docs.rs/clap/latest/clap/) — Argument parsing
-- [Chrono](https://docs.rs/chrono/latest/chrono/) — Date handling
+- [Chrono](https://docs.rs/chrono/latest/chrono/) — Date handling, calendar arithmetic, and weekday resolution
 
 ## Development
 
@@ -62,9 +92,12 @@ Templates are stored in the `templates/` directory:
 
 ## Project Structure
 
-- `src/main.rs`: Main CLI logic
-- `src/lib.rs`: todos-cli logic
-- `templates/`: Markdown templates
+- `src/main.rs`: CLI entry point (argument parsing, orchestration)
+- `src/lib.rs`: Core logic — `Todos` struct and `create_todos_file()`
+- `src/calendar.rs`: ICS calendar generation (VTODO, VALARM, RFC 5545)
+- `src/parser.rs`: Markdown and CSV parsing
+- `templates/`: Markdown templates (`header.md`, `1.md`–`7.md`)
+- `templates/todos_due_times.csv`: Due time mapping (weekday + priority → hour + alarm)
 - `Cargo.toml`: Project manifest
 
 ## Templates explanation

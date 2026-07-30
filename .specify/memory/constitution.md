@@ -1,7 +1,7 @@
 <!-- Sync Impact Report
-  Version change: (template) → 1.0.0
-  Modified principles: N/A (all new)
-  Added sections: Core Principles (5), Toolchain & Technology Stack, Development Workflow & Quality Gates, Governance
+  Version change: 1.0.0 → 1.0.1
+  Modified principles: N/A (no principle changes)
+  Added sections: N/A
   Removed sections: N/A
   Follow-up TODOs: None
 -->
@@ -55,7 +55,8 @@ Only the following crates are permitted in the production dependency tree
 
 - **Tera** (`1.x`) — Templating engine for generating the monthly TODOS file.
 - **Clap** (`4.x`, `derive` feature) — Argument parsing.
-- **Chrono** (`0.4.x`, `std` feature) — Date and calendar arithmetic.
+- **Chrono** (`0.4.x`, `std` + `now` features) — Date and calendar arithmetic,
+  including `Utc::now()` for ICS timestamps.
 
 Any new production dependency MUST be proposed with a written justification
 in a PR before addition. Rationale: Constraining the stack keeps the tool
@@ -93,4 +94,4 @@ supersedes all informal practices, conventions, and prior agreements.
   Reviewers are responsible for flagging violations. The `AGENTS.md` file
   serves as runtime guidance for agent-assisted development.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-29 | **Last Amended**: 2026-07-29
+**Version**: 1.0.1 | **Ratified**: 2026-07-29 | **Last Amended**: 2026-07-29
