@@ -2,7 +2,9 @@
 debug/
 release/
 *.swp
-.DStore
+.DS_Store
+Thumbs.db
+*.tmp
 /test_output
 *.rs.bk
 *.rlib

@@ -224,7 +224,9 @@ mod tests {
         let ics = generate_ics("TODOS - 202608", &items, &rules);
 
         let lines: Vec<&str> = ics.lines().collect();
-        let dtstart_idx = lines.iter().position(|l| l.starts_with("DTSTART:20260801T"));
+        let dtstart_idx = lines
+            .iter()
+            .position(|l| l.starts_with("DTSTART:20260801T"));
         let dtend_idx = lines.iter().position(|l| l.starts_with("DTEND:20260801T"));
 
         assert!(dtstart_idx.is_some(), "DTSTART for 20260801 not found");
