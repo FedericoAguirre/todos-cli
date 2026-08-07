@@ -14,7 +14,11 @@ fn make_rule(weekday: &str, priority: u8, hour: &str, alarm_minutes: u16) -> Due
 fn local_utc(date: NaiveDate, hour: u32, min: u32, sec: u32) -> String {
     let offset = *Local::now().offset();
     let naive = date.and_hms_opt(hour, min, sec).unwrap();
-    let utc = offset.from_local_datetime(&naive).earliest().unwrap().to_utc();
+    let utc = offset
+        .from_local_datetime(&naive)
+        .earliest()
+        .unwrap()
+        .to_utc();
     utc.format("%Y%m%dT%H%M%SZ").to_string()
 }
 
@@ -56,10 +60,7 @@ fn test_ics_basic_structure() {
         ics.contains("DTSTART:20260701T"),
         "DTSTART should have date-time format"
     );
-    assert!(
-        ics.contains("Z\r\n"),
-        "Times should be UTC with Z suffix"
-    );
+    assert!(ics.contains("Z\r\n"), "Times should be UTC with Z suffix");
 }
 
 #[test]
