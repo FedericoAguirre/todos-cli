@@ -180,8 +180,8 @@ fn test_ics_has_valid_vcalendar_structure() {
 }
 
 #[test]
-fn test_vevent_count_matches_todo_count() {
-    let dir = temp_dir("vevent-sync");
+fn test_vtodo_count_matches_todo_count() {
+    let dir = temp_dir("vtodo-sync");
     let output = run_cli(2026, 7, &dir);
     assert!(output.status.success(), "CLI should exit successfully");
 
@@ -189,11 +189,11 @@ fn test_vevent_count_matches_todo_count() {
     let ics = fs::read_to_string(dir.join("TODOS - 202607.ics")).unwrap();
 
     let md_todo_count = count_occurrences(&md, "- [ ] ");
-    let ics_vevent_count = count_occurrences(&ics, "BEGIN:VEVENT");
+    let ics_vtodo_count = count_occurrences(&ics, "BEGIN:VTODO");
 
     assert_eq!(
-        ics_vevent_count, md_todo_count,
-        "VEVENT count should equal MD todo count"
+        ics_vtodo_count, md_todo_count,
+        "VTODO count should equal MD todo count"
     );
 
     fs::remove_dir_all(&dir).unwrap();
@@ -223,9 +223,9 @@ fn test_february_leap_year_2024_has_29_days() {
 
     let ics = fs::read_to_string(dir.join("TODOS - 202402.ics")).unwrap();
     assert_eq!(
-        count_occurrences(&ics, "BEGIN:VEVENT"),
+        count_occurrences(&ics, "BEGIN:VTODO"),
         count_occurrences(&md, "- [ ] "),
-        "VEVENT count should match MD todo count"
+        "VTODO count should match MD todo count"
     );
 
     fs::remove_dir_all(&dir).unwrap();
@@ -255,9 +255,9 @@ fn test_february_non_leap_year_2023_has_28_days() {
 
     let ics = fs::read_to_string(dir.join("TODOS - 202302.ics")).unwrap();
     assert_eq!(
-        count_occurrences(&ics, "BEGIN:VEVENT"),
+        count_occurrences(&ics, "BEGIN:VTODO"),
         count_occurrences(&md, "- [ ] "),
-        "VEVENT count should match MD todo count"
+        "VTODO count should match MD todo count"
     );
 
     fs::remove_dir_all(&dir).unwrap();

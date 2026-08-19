@@ -1,5 +1,6 @@
-use chrono::{Local, NaiveDate, NaiveTime, TimeZone};
-use todos_cli::calendar::{generate_ics, generate_uid};
+use chrono::NaiveDate;
+use chrono::NaiveTime;
+use todos_cli::calendar::{generate_ics, generate_uid, generate_uid_with_ordinal};
 use todos_cli::parser::{DueTimeRule, TodoItem};
 
 fn make_rule(weekday: &str, priority: u8, hour: &str, alarm_minutes: u16) -> DueTimeRule {
@@ -9,17 +10,6 @@ fn make_rule(weekday: &str, priority: u8, hour: &str, alarm_minutes: u16) -> Due
         hour: NaiveTime::parse_from_str(hour, "%H:%M").unwrap(),
         alarm_minutes,
     }
-}
-
-fn local_utc(date: NaiveDate, hour: u32, min: u32, sec: u32) -> String {
-    let offset = *Local::now().offset();
-    let naive = date.and_hms_opt(hour, min, sec).unwrap();
-    let utc = offset
-        .from_local_datetime(&naive)
-        .earliest()
-        .unwrap()
-        .to_utc();
-    utc.format("%Y%m%dT%H%M%SZ").to_string()
 }
 
 #[test]
@@ -41,8 +31,8 @@ fn test_ics_basic_structure() {
         ics.contains("END:VCALENDAR\r\n"),
         "Should end with VCALENDAR"
     );
-    assert!(ics.contains("BEGIN:VEVENT\r\n"), "Should contain VEVENT");
-    assert!(ics.contains("END:VEVENT\r\n"), "Should close VEVENT");
+    assert!(ics.contains("BEGIN:VTODO\r\n"), "Should contain VTODO");
+    assert!(ics.contains("END:VTODO\r\n"), "Should close VTODO");
     assert!(ics.contains("VERSION:2.0\r\n"), "Should have version");
     assert!(
         ics.contains("PRODID:-//todos-cli//TODOS Calendar//EN\r\n"),
@@ -53,18 +43,17 @@ fn test_ics_basic_structure() {
         "Should have CALSCALE"
     );
     assert!(
-        !ics.contains("DTSTART;VALUE=DATE"),
-        "DTSTART should not use VALUE=DATE parameter"
+        ics.contains("DTSTART;VALUE=DATE:20260701\r\n"),
+        "DTSTART should be date-only pinned to the todo day"
     );
     assert!(
-        ics.contains("DTSTART:20260701T"),
-        "DTSTART should have date-time format"
+        !ics.contains("DTEND:"),
+        "DTEND should not be present for tasks"
     );
-    assert!(ics.contains("Z\r\n"), "Times should be UTC with Z suffix");
 }
 
 #[test]
-fn test_ics_vevent_count() {
+fn test_ics_vtodo_count() {
     let items = vec![
         TodoItem {
             date: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
@@ -81,8 +70,8 @@ fn test_ics_vevent_count() {
     ];
 
     let ics = generate_ics("TODOS - 202607", &items, &[]);
-    let vevent_count = ics.matches("BEGIN:VEVENT").count();
-    assert_eq!(vevent_count, 2, "Should have 2 VEVENTs for 2 items");
+    let vtodo_count = ics.matches("BEGIN:VTODO").count();
+    assert_eq!(vtodo_count, 2, "Should have 2 VTODOs for 2 items");
 }
 
 #[test]
@@ -98,13 +87,13 @@ fn test_ics_empty() {
         "Empty calendar should still be valid"
     );
     assert!(
-        !ics.contains("BEGIN:VEVENT"),
-        "Empty calendar should have no VEVENTs"
+        !ics.contains("BEGIN:VTODO"),
+        "Empty calendar should have no VTODOs"
     );
 }
 
 #[test]
-fn test_event_timestamp_from_csv_match() {
+fn test_due_timestamp_from_csv_match() {
     let items = vec![TodoItem {
         date: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
         weekday_name: "Miércoles".to_string(),
@@ -115,24 +104,18 @@ fn test_event_timestamp_from_csv_match() {
     let rules = vec![make_rule("Miércoles", 1, "09:00", 30)];
     let ics = generate_ics("TODOS - 202607", &items, &rules);
 
-    let expected_dtstart = local_utc(NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(), 9, 0, 0);
-    let expected_dtend = local_utc(NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(), 10, 0, 0);
     assert!(
-        ics.contains(&format!("DTSTART:{}\r\n", expected_dtstart)),
-        "DTSTART should match CSV hour converted to UTC"
+        ics.contains("DUE:20260701T090000\r\n"),
+        "DUE should be the floating local CSV hour"
     );
     assert!(
-        ics.contains(&format!("DTEND:{}\r\n", expected_dtend)),
-        "DTEND should be 1 hour after DTSTART"
-    );
-    assert!(
-        ics.contains("TRIGGER:-PT30M\r\n"),
-        "VALARM should use CSV minutes"
+        ics.contains("TRIGGER;RELATED=END:-PT30M\r\n"),
+        "VALARM should anchor to DUE with CSV minutes"
     );
 }
 
 #[test]
-fn test_event_timestamp_no_csv_match() {
+fn test_due_timestamp_no_csv_match() {
     let items = vec![TodoItem {
         date: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
         weekday_name: "Miércoles".to_string(),
@@ -143,15 +126,9 @@ fn test_event_timestamp_no_csv_match() {
     let rules = vec![make_rule("Miércoles", 1, "09:00", 30)];
     let ics = generate_ics("TODOS - 202607", &items, &rules);
 
-    let expected_dtstart = local_utc(NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(), 9, 0, 0);
-    let expected_dtend = local_utc(NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(), 10, 0, 0);
     assert!(
-        ics.contains(&format!("DTSTART:{}\r\n", expected_dtstart)),
-        "No CSV match should default to 09:00 DTSTART"
-    );
-    assert!(
-        ics.contains(&format!("DTEND:{}\r\n", expected_dtend)),
-        "No CSV match should default to 10:00 DTEND"
+        ics.contains("DUE:20260701T235959\r\n"),
+        "No CSV match should default to end of day 23:59"
     );
     assert!(
         !ics.contains("BEGIN:VALARM"),
@@ -196,6 +173,41 @@ fn test_content_escaping() {
     assert!(
         ics.contains("Escape \\\\ \\; comma \\, and\\nnewline"),
         "Special chars should be escaped"
+    );
+}
+
+#[test]
+fn test_only_vtodo_components_present() {
+    let items = vec![
+        TodoItem {
+            date: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
+            weekday_name: "Miércoles".to_string(),
+            priority: 1,
+            description: "Task 1".to_string(),
+        },
+        TodoItem {
+            date: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
+            weekday_name: "Miércoles".to_string(),
+            priority: 2,
+            description: "Task 2".to_string(),
+        },
+        TodoItem {
+            date: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
+            weekday_name: "Miércoles".to_string(),
+            priority: 3,
+            description: "Task 3".to_string(),
+        },
+    ];
+
+    let ics = generate_ics("TODOS - 202607", &items, &[]);
+    assert!(
+        !ics.contains("VEVENT"),
+        "Output should contain no VEVENT components"
+    );
+    assert_eq!(
+        ics.matches("BEGIN:VTODO").count(),
+        3,
+        "Exactly 3 VTODO components for 3 todos"
     );
 }
 
@@ -257,4 +269,51 @@ fn test_generate_uid_uniqueness() {
         uid1, uid3,
         "Different priorities should produce different UIDs"
     );
+}
+
+#[test]
+fn test_generate_uid_distinct_for_identical_todos() {
+    let date = NaiveDate::from_ymd_opt(2026, 7, 1).unwrap();
+    let uid1 = generate_uid(date, "Task", 1);
+    let uid2 = generate_uid(date, "Task", 1);
+    assert_eq!(
+        uid1, uid2,
+        "generate_uid alone is deterministic and does not distinguish duplicates"
+    );
+    let uid_duplicate = generate_uid_with_ordinal(date, "Task", 1, 2);
+    assert_ne!(
+        uid1, uid_duplicate,
+        "Ordinal suffix must disambiguate identical todos"
+    );
+}
+
+#[test]
+fn test_generate_ics_uids_stable_and_distinct() {
+    let items = vec![
+        TodoItem {
+            date: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
+            weekday_name: "Miércoles".to_string(),
+            priority: 1,
+            description: "Duplicated task".to_string(),
+        },
+        TodoItem {
+            date: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
+            weekday_name: "Miércoles".to_string(),
+            priority: 1,
+            description: "Duplicated task".to_string(),
+        },
+    ];
+
+    let ics1 = generate_ics("TODOS - 202607", &items, &[]);
+    let ics2 = generate_ics("TODOS - 202607", &items, &[]);
+
+    let uids1: Vec<&str> = ics1.lines().filter(|l| l.starts_with("UID:")).collect();
+    let uids2: Vec<&str> = ics2.lines().filter(|l| l.starts_with("UID:")).collect();
+
+    assert_eq!(uids1.len(), 2, "One UID per todo");
+    assert_eq!(
+        uids1, uids2,
+        "UID set should be stable across regenerations"
+    );
+    assert_ne!(uids1[0], uids1[1], "Identical todos need distinct UIDs");
 }

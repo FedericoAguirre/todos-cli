@@ -53,6 +53,18 @@ fn test_md_parser_handles_empty() {
 }
 
 #[test]
+fn test_md_parser_skips_checked_off_items() {
+    let md = "\
+## 20260701 - Miércoles
+- [x] 1. Done task
+- [ ] 2. Pending task
+";
+    let items = MdParser::parse(md);
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].description, "Pending task");
+}
+
+#[test]
 fn test_csv_parser_parses_rules() {
     let csv = "\
 weekday,priority,hour,minutes

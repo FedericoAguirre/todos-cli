@@ -25,20 +25,23 @@ cargo run -- -y 2025 -m 9
 
 ### Todos Calendar
 
-Since v0.2.0, the CLI also generates an **ICS calendar file** (`TODOS - YYYYMM.ics`) alongside the markdown file. The ICS file follows the [RFC 5545](https://tools.ietf.org/html/rfc5545) iCalendar standard and can be imported into **Google Calendar**, **Apple Calendar**, **Outlook**, **Android**, or any app that supports the `.ics` format.
+Since v0.2.0, the CLI also generates an **ICS calendar file** (`TODOS - YYYYMM.ics`) alongside the markdown file. The ICS file follows the [RFC 5545](https://tools.ietf.org/html/rfc5545) iCalendar standard and can be imported as **tasks** into task-capable processors such as Android task apps, task-oriented iOS/macOS surfaces, and CalDAV clients.
 
-Each todo item from the markdown file becomes a **VEVENT** component (calendar event) with:
+Each pending todo item from the markdown file becomes a **VTODO** component (task) with:
 
 | ICS Field | Description |
 |-----------|-------------|
+| `UID` | Deterministic hash-based identifier (`<hash>@todos-cli`); identical todos get an ordinal suffix so they stay distinct |
+| `DTSTART` | Date-only (`DTSTART;VALUE=DATE`) pinning the task to its todo's day |
 | `SUMMARY` | `[P<N>]` prefix + description with `[[ ]]` wiki-link brackets removed |
-| `DTSTART` | Event start time — configurable per weekday + priority (see below) |
-| `DTEND` | End time = DTSTART + 1 hour |
-| `VALARM` | Optional reminder alarm that fires N minutes before DTSTART |
+| `PRIORITY` | Task priority `1`–`6` (1 = highest) |
+| `DUE` | Due moment in floating local time — configurable per weekday + priority (see below) |
+| `STATUS` | Always `NEEDS-ACTION` |
+| `VALARM` | Optional reminder that fires N minutes before `DUE` (`TRIGGER;RELATED=END:-PT<N>M`) |
 
-**Why VEVENT?** Earlier versions used `VTODO` (task) components. However, macOS Removed native VTODO import from Reminders.app starting in Monterey (2021), causing Calendar.app to reject the file with "No valid events found." Switching to `VEVENT` fixed cross-platform compatibility — it works on macOS Calendar, iOS, Android, Google Calendar, and Outlook alike.
+**Why VTODO?** Tasks are represented as checkable `VTODO` components so each todo shows up as a task (not a calendar block) in Android and Mac task surfaces and other ICS processors. Note that the standalone Calendar.app only renders `VEVENT` events — the task output targets task-capable importers, which honor `VTODO` with `DTSTART;VALUE=DATE` + `DUE`. Event-only importers ignore `VTODO` (expected behavior, not a defect).
 
-**Event scheduling logic**: The CLI reads `templates/todos_due_times.csv` to map each weekday + priority combination to a specific start hour and alarm offset. If a match is found, `DTSTART` is set to `md.date + csv.hour`, `DTEND` to 1 hour later, and a `VALARM` triggers `csv.minutes` minutes before start. If no match exists, `DTSTART` defaults to 09:00.
+**Task scheduling logic**: The CLI reads `templates/todos_due_times.csv` to map each weekday + priority combination to a due hour and alarm offset. If a match is found, `DUE` is set to `md.date + csv.hour` (floating local) and a `VALARM` triggers `csv.minutes` minutes before `DUE`. If no match exists, `DUE` defaults to `23:59` on the todo's day with no `VALARM`.
 
 Example mapping (from `templates/todos_due_times.csv`):
 

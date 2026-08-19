@@ -1,19 +1,22 @@
 use crate::parser::{DueTimeRule, TodoItem};
-use chrono::{DateTime, Duration, Local, NaiveDate, NaiveTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 pub struct IcsCalendar {
     pub name: String,
-    pub events: Vec<IcsEvent>,
+    pub todos: Vec<IcsTodo>,
 }
 
-pub struct IcsEvent {
+pub struct IcsTodo {
     pub uid: String,
     pub dtstamp: DateTime<Utc>,
     pub summary: String,
-    pub dtstart: DateTime<Utc>,
-    pub dtend: DateTime<Utc>,
+    pub date: NaiveDate,
+    pub priority: u8,
+    pub due: NaiveDateTime,
+    pub status: String,
     pub alarm_minutes: Option<u16>,
 }
 
@@ -21,12 +24,12 @@ impl IcsCalendar {
     pub fn new(name: &str) -> Self {
         IcsCalendar {
             name: name.to_string(),
-            events: Vec::new(),
+            todos: Vec::new(),
         }
     }
 
-    pub fn add_event(&mut self, event: IcsEvent) -> &mut Self {
-        self.events.push(event);
+    pub fn add_todo(&mut self, todo: IcsTodo) -> &mut Self {
+        self.todos.push(todo);
         self
     }
 
@@ -38,30 +41,29 @@ impl IcsCalendar {
         output.push_str("CALSCALE:GREGORIAN\r\n");
         output.push_str(&format!("X-WR-CALNAME:{}\r\n", self.name));
 
-        for event in &self.events {
-            output.push_str("BEGIN:VEVENT\r\n");
-            output.push_str(&format!("UID:{}\r\n", event.uid));
+        for todo in &self.todos {
+            output.push_str("BEGIN:VTODO\r\n");
+            output.push_str(&format!("UID:{}\r\n", todo.uid));
             output.push_str(&format!(
                 "DTSTAMP:{}\r\n",
-                event.dtstamp.format("%Y%m%dT%H%M%SZ")
+                todo.dtstamp.format("%Y%m%dT%H%M%SZ")
             ));
             output.push_str(&format!(
-                "DTSTART:{}\r\n",
-                event.dtstart.format("%Y%m%dT%H%M%SZ")
+                "DTSTART;VALUE=DATE:{}\r\n",
+                todo.date.format("%Y%m%d")
             ));
-            output.push_str(&format!(
-                "DTEND:{}\r\n",
-                event.dtend.format("%Y%m%dT%H%M%SZ")
-            ));
-            output.push_str(&format!("SUMMARY:{}\r\n", escape_ics(&event.summary)));
-            if let Some(mins) = event.alarm_minutes {
+            output.push_str(&format!("SUMMARY:{}\r\n", escape_ics(&todo.summary)));
+            output.push_str(&format!("PRIORITY:{}\r\n", todo.priority));
+            output.push_str(&format!("DUE:{}\r\n", todo.due.format("%Y%m%dT%H%M%S")));
+            output.push_str(&format!("STATUS:{}\r\n", todo.status));
+            if let Some(mins) = todo.alarm_minutes {
                 output.push_str("BEGIN:VALARM\r\n");
-                output.push_str(&format!("TRIGGER:-PT{}M\r\n", mins));
+                output.push_str(&format!("TRIGGER;RELATED=END:-PT{}M\r\n", mins));
                 output.push_str("ACTION:DISPLAY\r\n");
                 output.push_str("DESCRIPTION:Reminder\r\n");
                 output.push_str("END:VALARM\r\n");
             }
-            output.push_str("END:VEVENT\r\n");
+            output.push_str("END:VTODO\r\n");
         }
 
         output.push_str("END:VCALENDAR\r\n");
@@ -104,55 +106,63 @@ fn fold_lines(s: &str) -> String {
 }
 
 pub fn generate_uid(date: NaiveDate, summary: &str, priority: u8) -> String {
+    generate_uid_with_ordinal(date, summary, priority, 0)
+}
+
+pub fn generate_uid_with_ordinal(
+    date: NaiveDate,
+    summary: &str,
+    priority: u8,
+    ordinal: u32,
+) -> String {
     let mut hasher = DefaultHasher::new();
     date.hash(&mut hasher);
     summary.hash(&mut hasher);
     priority.hash(&mut hasher);
+    ordinal.hash(&mut hasher);
     format!("{:x}@todos-cli", hasher.finish())
 }
 
-fn default_start_time() -> NaiveTime {
-    NaiveTime::from_hms_opt(9, 0, 0).unwrap()
+fn default_due_time() -> NaiveTime {
+    NaiveTime::from_hms_opt(23, 59, 59).unwrap()
 }
 
 pub fn generate_ics(name: &str, items: &[TodoItem], rules: &[DueTimeRule]) -> String {
     let dtstamp = Utc::now();
     let mut calendar = IcsCalendar::new(name);
 
-    let local_offset = *Local::now().offset();
+    let mut uid_counts: HashMap<(NaiveDate, String, u8), u32> = HashMap::new();
 
     for item in items {
-        let uid = generate_uid(item.date, &item.description, item.priority);
+        let uid_base = generate_uid(item.date, &item.description, item.priority);
+        let key = (item.date, item.description.clone(), item.priority);
+        let ordinal = uid_counts.entry(key).or_insert(0);
+        *ordinal += 1;
 
-        let (start_local, alarm_minutes) =
+        let uid = if *ordinal > 1 {
+            generate_uid_with_ordinal(item.date, &item.description, item.priority, *ordinal)
+        } else {
+            uid_base
+        };
+
+        let (due, alarm_minutes) =
             if let Some(rule) = DueTimeRule::lookup(rules, &item.weekday_name, item.priority) {
                 (item.date.and_time(rule.hour), Some(rule.alarm_minutes))
             } else {
-                (item.date.and_time(default_start_time()), None)
+                (item.date.and_time(default_due_time()), None)
             };
 
-        let end_local = start_local + Duration::hours(1);
-
-        let dtstart = local_offset
-            .from_local_datetime(&start_local)
-            .earliest()
-            .unwrap()
-            .to_utc();
-        let dtend = local_offset
-            .from_local_datetime(&end_local)
-            .earliest()
-            .unwrap()
-            .to_utc();
-
-        let event = IcsEvent {
+        let todo = IcsTodo {
             uid,
             dtstamp,
             summary: format!("[P{}] {}", item.priority, item.description),
-            dtstart,
-            dtend,
+            date: item.date,
+            priority: item.priority,
+            due,
+            status: "NEEDS-ACTION".to_string(),
             alarm_minutes,
         };
-        calendar.add_event(event);
+        calendar.add_todo(todo);
     }
 
     calendar.format_ics()
@@ -172,35 +182,38 @@ mod tests {
     }
 
     #[test]
-    fn test_ics_uses_vevent_instead_of_vtodo() {
+    fn test_ics_uses_vtodo_instead_of_vevent() {
         let md = sample_md();
         let rules = CsvParser::parse(sample_csv());
         let items = MdParser::parse(md);
         let ics = generate_ics("TODOS - 202608", &items, &rules);
 
-        assert!(!ics.contains("VTODO"), "Should not contain VTODO");
-        assert!(ics.contains("VEVENT"), "Should contain VEVENT");
+        assert!(ics.contains("VTODO"), "Should contain VTODO");
+        assert!(!ics.contains("VEVENT"), "Should not contain VEVENT");
     }
 
     #[test]
-    fn test_ics_uses_dtend_instead_of_due() {
+    fn test_ics_uses_due_instead_of_dtend() {
         let md = sample_md();
         let rules = CsvParser::parse(sample_csv());
         let items = MdParser::parse(md);
         let ics = generate_ics("TODOS - 202608", &items, &rules);
 
-        assert!(!ics.contains("DUE:"), "Should not contain DUE:");
-        assert!(ics.contains("DTEND:"), "Should contain DTEND:");
+        assert!(ics.contains("DUE:"), "Should contain DUE:");
+        assert!(!ics.contains("DTEND:"), "Should not contain DTEND:");
     }
 
     #[test]
-    fn test_ics_no_status_field() {
+    fn test_ics_has_needs_action_status() {
         let md = sample_md();
         let rules = CsvParser::parse(sample_csv());
         let items = MdParser::parse(md);
         let ics = generate_ics("TODOS - 202608", &items, &rules);
 
-        assert!(!ics.contains("STATUS:"), "Should not contain STATUS:");
+        assert!(
+            ics.contains("STATUS:NEEDS-ACTION"),
+            "Should contain STATUS:NEEDS-ACTION"
+        );
     }
 
     #[test]
@@ -216,33 +229,20 @@ mod tests {
     }
 
     #[test]
-    fn test_ics_event_duration_one_hour() {
+    fn test_ics_date_pinned_and_due_on_day() {
         let md = sample_md();
         let rules = CsvParser::parse("weekday,priority,hour,minutes\nLunes,1,9:00,30\n");
         let items = MdParser::parse(md);
 
         let ics = generate_ics("TODOS - 202608", &items, &rules);
 
-        let lines: Vec<&str> = ics.lines().collect();
-        let dtstart_idx = lines
-            .iter()
-            .position(|l| l.starts_with("DTSTART:20260801T"));
-        let dtend_idx = lines.iter().position(|l| l.starts_with("DTEND:20260801T"));
-
-        assert!(dtstart_idx.is_some(), "DTSTART for 20260801 not found");
-        assert!(dtend_idx.is_some(), "DTEND for 20260801 not found");
-
-        let dtstart_line = lines[dtstart_idx.unwrap()];
-        let dtend_line = lines[dtend_idx.unwrap()];
-
-        let start = &dtstart_line["DTSTART:".len()..];
-        let end = &dtend_line["DTEND:".len()..];
-
         assert!(
-            end > start,
-            "DTEND ({}) should be after DTSTART ({})",
-            end,
-            start
+            ics.contains("DTSTART;VALUE=DATE:20260801\r\n"),
+            "DTSTART should be date-only pinned to 20260801"
+        );
+        assert!(
+            ics.contains("DUE:20260801T090000\r\n"),
+            "DUE should be the floating local rule hour on the todo's day"
         );
     }
 
@@ -266,6 +266,6 @@ mod tests {
         let ics = generate_ics("TODOS - 202608", &items, &rules);
 
         assert!(ics.contains("BEGIN:VALARM\r\n"));
-        assert!(ics.contains("TRIGGER:-PT30M\r\n"));
+        assert!(ics.contains("TRIGGER;RELATED=END:-PT30M\r\n"));
     }
 }

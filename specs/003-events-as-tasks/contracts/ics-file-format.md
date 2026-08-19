@@ -1,4 +1,4 @@
-# ICS File Format Contract
+# ICS File Format Contract (VTODO)
 
 ## File
 
@@ -19,20 +19,21 @@ The file MUST conform to RFC 5545 (iCalendar). Key requirements:
 BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//todos-cli//TODOS Calendar//EN
+CALSCALE:GREGORIAN
 X-WR-CALNAME:TODOS - YYYYMM
 BEGIN:VTODO
 UID:<unique-id>@todos-cli
-DTSTAMP:<generation-timestamp>Z
+DTSTAMP:<generation-timestamp-UTC>
 DTSTART;VALUE=DATE:<YYYYMMDD>
-SUMMARY:[P<n>] <escaped-description>
+SUMMARY:<[P<n>] escaped-description>
 PRIORITY:<1-6>
 DUE:<YYYYMMDDTHHMMSS>
 STATUS:NEEDS-ACTION
-BEGIN:VALARM
+[ BEGIN:VALARM
 TRIGGER;RELATED=END:-PT<M>M
 ACTION:DISPLAY
 DESCRIPTION:Reminder
-END:VALARM
+END:VALARM ]
 END:VTODO
 ...
 END:VCALENDAR
@@ -42,7 +43,8 @@ END:VCALENDAR
 
 ### UID
 - MUST be globally unique per VTODO
-- Generated as: `{hash(date + summary + priority + ordinal)}@todos-cli` (deterministic; per-item ordinal appended so identical todos stay distinct)
+- Format: `{hash(date + summary + priority + ordinal)}@todos-cli`
+- Deterministic across regenerations; per-item ordinal appended so identical-looking todos stay distinct
 - No dependency on `uuid` crate; hash-based avoids new deps
 
 ### DTSTAMP
@@ -51,29 +53,36 @@ END:VCALENDAR
 - Generated once per file, same for all VTODOs in the file
 
 ### DTSTART
-- Value type: DATE (no time component)
+- Value type: DATE (no time component, no timezone)
 - Format: `DTSTART;VALUE=DATE:YYYYMMDD`
-- Uses the todo's date from the monthly file
+- Pins the task to its todo's day (all-day task placement)
 
 ### SUMMARY
 - `[P<n>]` prefix + todo description with `[[ ]]` brackets stripped
 - RFC 5545 content-line escaping applied
 
 ### PRIORITY
-- Integer 1–6 (1 = highest)
-- Maps from CSV priority range 1–6 directly
+- Integer 1–6 (1 = highest), mapped directly from the CSV/markdown priority
 - RFC 5545 defines 1 as highest, 9 as lowest
 
 ### DUE
-- Format: `YYYYMMDDTHHMMSS` (local time, no timezone suffix)
-- Computed as: `md.date + csv.hour` on matching weekday + priority
+- Format: `YYYYMMDDTHHMMSS` (floating local time — no timezone suffix, no TZID)
+- Computed as: `todo.date + rule.hour` on matching weekday + priority
 - Default (no CSV match): `YYYYMMDDT235959`
+- MUST NOT precede the task's DTSTART date
 
 ### STATUS
 - Always: `NEEDS-ACTION`
 - RFC 5545 defines: NEEDS-ACTION, COMPLETED, IN-PROCESS, CANCELLED
 
 ### VALARM
-- Trigger: `TRIGGER;RELATED=END:-PT{M}M` (M minutes before DUE; anchored to the due moment)
+- Trigger: `TRIGGER;RELATED=END:-PT{M}M` (M minutes before DUE)
+- `RELATED=END` anchors the alarm to the DUE moment (correct for date-only DTSTART)
 - Action: `DISPLAY` (shows popup reminder)
 - Omitted entirely when no CSV match for the todo
+
+## Compatibility Notes
+
+- macOS/Apple: `VTODO` is the task format consumed by task-capable surfaces/processors; Calendar.app itself only renders `VEVENT` events and is not the target surface for tasks.
+- Android: task-capable calendar/task apps and CalDAV processors honor `VTODO` with `DTSTART;VALUE=DATE` + `DUE`.
+- Generic ICS processors: RFC 5545-compliant readers parse all fields; event-only importers ignore `VTODO` (expected behavior, not a defect).
